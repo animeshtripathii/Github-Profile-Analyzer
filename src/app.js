@@ -5,7 +5,13 @@ const rateLimit = require('express-rate-limit');
 const profileRoutes = require('./routes/profiles');
 const errorHandler = require('./middleware/errorHandler');
 
+const { testConnection } = require('./config/db');
+
 const app = express();
+
+testConnection().catch(err => {
+  console.error('❌ Database migration failed:', err.message);
+});
 
 
 app.use(cors());

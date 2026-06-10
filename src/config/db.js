@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const mysql = require('mysql2/promise');
 
 const pool = mysql.createPool({
@@ -11,6 +13,7 @@ const pool = mysql.createPool({
   queueLimit: 0,
   enableKeepAlive: true,
   keepAliveInitialDelay: 0,
+  ssl: process.env.DB_HOST && process.env.DB_HOST !== 'localhost' ? { rejectUnauthorized: false } : undefined,
 });
 
 
@@ -19,9 +22,29 @@ async function testConnection() {
   try {
     await connection.ping();
     console.log('✅ MySQL connection pool established successfully.');
+
+    const [rows] = await connection.query(`SHOW TABLES LIKE 'profiles'`);
+    if (rows.length === 0) {
+      console.log('🔄 Profiles table not found. Initializing database schema...');
+      const schemaPath = path.join(__dirname, '..', '..', 'scripts', 'schema.sql');
+      const schemaSql = fs.readFileSync(schemaPath, 'utf8');
+
+      const statements = schemaSql
+        .split(';')
+        .map(stmt => stmt.trim())
+        .filter(stmt => stmt.length > 0);
+
+      for (const stmt of statements) {
+        await connection.query(stmt);
+      }
+      console.log('✅ Database schema initialized successfully.');
+    } else {
+      console.log('📊 Profiles table exists. Schema is up-to-date.');
+    }
   } finally {
     connection.release();
   }
 }
 
 module.exports = { pool, testConnection };
+
