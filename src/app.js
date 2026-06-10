@@ -9,9 +9,12 @@ const { testConnection } = require('./config/db');
 
 const app = express();
 
+app.set('trust proxy', 1);
+
 testConnection().catch(err => {
   console.error('❌ Database migration failed:', err.message);
 });
+
 
 
 app.use(cors());
